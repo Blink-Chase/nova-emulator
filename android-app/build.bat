@@ -53,7 +53,7 @@ echo Install complete!
 
 echo.
 echo [2/3] Launching App...
-adb shell am start -n com.nova/.MainActivity
+adb shell am start -n com.blinkchase.nova/.MainActivity
 
 echo.
 echo [3/3] Done! Nova should now be open on the emulator.

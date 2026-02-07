@@ -1,4 +1,4 @@
-package com.nova
+package com.blinkchase.nova
 
 import android.util.Log
 import java.io.File

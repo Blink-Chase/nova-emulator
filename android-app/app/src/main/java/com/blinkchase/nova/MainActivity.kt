@@ -1,6 +1,8 @@
-package com.nova
+package com.blinkchase.nova
 
 import android.Manifest
+import android.util.Log
+import com.blinkchase.nova.ui.theme.NovaEmuTheme
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -75,6 +77,17 @@ class MainActivity : ComponentActivity() {
     var targetSampleRate = 44100
     val samplesWritten = AtomicLong(0)
     
+    // Advanced audio tracking for underrun detection
+    private var audioErrorCount = 0
+    private var lastAudioLogTime = 0L
+    private var audioSamplesTotal = 0L
+    private var audioUnderruns = 0
+    private var audioInitCount = 0
+    private var audioCutouts = 0
+    private var lastPositionFrames = 0L
+    private var lastPositionTime = 0L
+    private var wasPlaying = false
+    
     external fun loadCore(corePath: String): String?
     external fun nativeLoadGame(romPath: String): Boolean
     external fun nativePauseGame()
@@ -93,49 +106,118 @@ class MainActivity : ComponentActivity() {
     fun loadGame(romPath: String): Boolean { resetAudio(); return nativeLoadGame(romPath) }
 
     fun writeAudio(data: ShortArray, size: Int) {
-        val track = synchronized(audioLock) {
+        val currentTime = System.currentTimeMillis()
+        
+        // Check for audio cutouts by monitoring playback position
+        val track = synchronized(audioLock) { audioTrack }
+        
+        if (track != null && track.playState == android.media.AudioTrack.PLAYSTATE_PLAYING) {
+            if (!wasPlaying) {
+                // Audio started playing
+                wasPlaying = true
+                lastPositionTime = currentTime
+                lastPositionFrames = 0
+                Log.i("Nova", "AUDIO: Playback started")
+            }
+            
+            // Check actual playback position
+            try {
+                val currentPosition = track.playbackHeadPosition.toLong()
+                
+                if (lastPositionFrames > 0L && currentPosition < lastPositionFrames - 1000L) {
+                    // Audio jumped backwards = CUTOUT!
+                    audioCutouts++
+                    val missedFrames = (lastPositionFrames - currentPosition)
+                    Log.w("Nova", "AUDIO: CUTOUT #$audioCutouts! Missed ~$missedFrames frames")
+                }
+                
+                lastPositionFrames = currentPosition
+                lastPositionTime = currentTime
+            } catch (e: Exception) {
+                // Ignore position read errors
+            }
+        } else {
+            wasPlaying = false
+        }
+        
+        // Log audio stats every 5 seconds
+        if (currentTime - lastAudioLogTime > 5000 && audioInitCount > 0) {
+            val bufferMultiplier = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_AUDIO_LATENCY, 1)
+            Log.i("Nova", "AUDIO: Stats - Total: ${audioSamplesTotal}, Cutouts: $audioCutouts, Errors: $audioErrorCount, LatMode: $bufferMultiplier")
+            lastAudioLogTime = currentTime
+        }
+        
+        val audioTrackLocal = synchronized(audioLock) {
             if (audioTrack == null) {
                 try {
+                    audioInitCount++
                     val latencyMode = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_AUDIO_LATENCY, 1)
                     val minSize = android.media.AudioTrack.getMinBufferSize(targetSampleRate, android.media.AudioFormat.CHANNEL_OUT_STEREO, android.media.AudioFormat.ENCODING_PCM_16BIT)
-                    if (minSize <= 0) return
+                    if (minSize <= 0) {
+                        Log.e("Nova", "AUDIO: ERROR - Invalid min buffer size: $minSize")
+                        return
+                    }
                     val bufferMultiplier = when(latencyMode) { 0 -> 3; 1 -> 6; 2 -> 10; else -> 6 }
                     val bufferSize = minSize * bufferMultiplier
+                    Log.d("Nova", "AUDIO: Init - Rate: $targetSampleRate, MinBuf: $minSize, Mult: $bufferMultiplier, Size: $bufferSize")
                     audioTrack = android.media.AudioTrack.Builder()
                         .setAudioAttributes(android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_GAME).setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC).build())
                         .setAudioFormat(android.media.AudioFormat.Builder().setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT).setSampleRate(targetSampleRate).setChannelMask(android.media.AudioFormat.CHANNEL_OUT_STEREO).build())
                         .setBufferSizeInBytes(bufferSize).setTransferMode(android.media.AudioTrack.MODE_STREAM).build()
                     audioTrack?.play()
-                } catch (e: Exception) { return }
+                    Log.i("Nova", "AUDIO: Track created")
+                } catch (e: Exception) {
+                    audioErrorCount++
+                    Log.e("Nova", "AUDIO: ERROR init - ${e.message}")
+                    return
+                }
             }
             audioTrack
         }
-        if (track != null) {
+        
+        if (audioTrackLocal != null) {
             try {
-                val result = track.write(data, 0, size)
-                if (result > 0) samplesWritten.addAndGet(result.toLong())
-                else if (result < 0) resetAudio()
-            } catch (e: Exception) {}
+                val result = audioTrackLocal.write(data, 0, size)
+                if (result > 0) {
+                    samplesWritten.addAndGet(result.toLong())
+                    audioSamplesTotal += result
+                } else if (result < 0) {
+                    audioErrorCount++
+                    audioCutouts++
+                    Log.e("Nova", "AUDIO: WRITE FAIL #$audioCutouts code=$result")
+                    resetAudio()
+                }
+            } catch (e: Exception) {
+                audioErrorCount++
+                Log.e("Nova", "AUDIO: Exception - ${e.message}")
+            }
         }
     }
 
-    fun resetAudio() { synchronized(audioLock) { try { audioTrack?.release() } catch (e: Exception) {}; audioTrack = null } }
+    fun resetAudio() { 
+        synchronized(audioLock) { 
+            try { 
+                audioTrack?.release() 
+                Log.d("Nova", "AUDIO: Track released")
+            } catch (e: Exception) {} 
+        }
+        audioTrack = null 
+        wasPlaying = false
+        lastPositionFrames = 0
+    }
     
     fun pauseGame() { 
         synchronized(audioLock) { 
             try { audioTrack?.pause() } catch (e: Exception) {} 
-            // Don't flush - causes audio cutout
         }
+        wasPlaying = false
         nativePauseGame() 
     }
     
     fun resumeGame() { 
-        // Resume native emulation thread
         nativeResumeGame()
-        // Restart audio playback
         synchronized(audioLock) { 
             try { audioTrack?.play() } catch (e: Exception) { 
-                // Recreate audio track if needed
                 resetAudio()
                 try { audioTrack?.play() } catch (e2: Exception) {} 
             } 
@@ -146,6 +228,7 @@ class MainActivity : ComponentActivity() {
         synchronized(audioLock) { 
             try { audioTrack?.pause() } catch (e: Exception) {} 
         }
+        wasPlaying = false
         nativeQuitGame(); 
         resetAudio() 
     }
@@ -165,7 +248,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         updateNativeActivity()
-        setContent { MaterialTheme(colorScheme = darkColorScheme()) { Surface(modifier = Modifier.fillMaxSize()) { NovaApp() } } }
+        setContent { NovaEmuTheme { Surface(modifier = Modifier.fillMaxSize()) { NovaApp() } } }
     }
 
     override fun onStop() { super.onStop(); resetAudio() }
@@ -195,7 +278,6 @@ class MainActivity : ComponentActivity() {
         
         val savesDir = remember { File(storageDir, "saves").also { it.mkdirs() } }
         val layoutsDir = remember { File(storageDir, "layouts").also { it.mkdirs() } }
-        // Cores are copied from Documents/Nova/cores/ to internal storage for loading
         val internalCoresDir = remember { File(context.filesDir, "cores").also { it.mkdirs() } }
         val coresDir = remember { File(storageDir, "cores").also { it.mkdirs() } }
         val systemDir = remember { File(storageDir, "system").also { it.mkdirs() } }
@@ -207,22 +289,31 @@ class MainActivity : ComponentActivity() {
 
         fun performScan() {
             scope.launch(Dispatchers.IO) {
+                Log.d("Nova", "SCAN: Starting ROM scan...")
                 val mode = prefs.getInt(KEY_SCAN_MODE, 0)
                 val pathsToScan = if (mode == 1) {
                     prefs.getStringSet(KEY_CUSTOM_PATHS, emptySet())?.map { File(it) } ?: emptyList()
                 } else {
                     listOf(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS))
                 }
+                Log.d("Nova", "SCAN: Scanning ${pathsToScan.size} paths")
                 val allGames = mutableListOf<GameFile>()
                 pathsToScan.forEach { dir ->
-                    if (dir.exists() && dir.isDirectory) { allGames.addAll(RomScanner.scan(dir)) }
+                    Log.d("Nova", "SCAN: Checking directory: ${dir.absolutePath}")
+                    if (dir.exists() && dir.isDirectory) { 
+                        val found = RomScanner.scan(dir)
+                        Log.d("Nova", "SCAN: Found ${found.size} games in ${dir.name}")
+                        allGames.addAll(found)
+                    } else {
+                        Log.w("Nova", "SCAN: Directory does not exist: ${dir.absolutePath}")
+                    }
                 }
+                Log.d("Nova", "SCAN: Total games found: ${allGames.size}")
                 withContext(Dispatchers.Main) { gameList = allGames }
             }
         }
 
         LaunchedEffect(Unit) {
-            // Copy cores from Documents/Nova/cores/ to internal storage for Android to load them
             var copiedCount = 0
             coresDir.listFiles()?.filter { it.name.endsWith(".so") }?.forEach { soFile ->
                 val targetFile = File(internalCoresDir, soFile.name)
@@ -277,7 +368,9 @@ class MainActivity : ComponentActivity() {
                         btnId to Offset(x, y)
                     } else null
                 }.toMap()
-            } catch (e: Exception) { emptyMap() }
+            } catch (e: Exception) {
+                emptyMap()
+            }
         }
 
         fun launchGame(game: GameFile) {

@@ -30,10 +30,10 @@ secrets.properties
 # Generated files
 *.class
 
-# Excluded project folders
-snes9x/
+# Excluded project folders (third-party, see NOTICES.txt)
 web-app/
 docs/
+examples/
 
 # Development notes (not tracked)
 README-DEV.md

@@ -4,7 +4,7 @@ A multi-platform Android emulator frontend built with Jetpack Compose and libret
 
 ## Features
 
-- **Multi-platform support**: Play SNES, Genesis, PS1, N64, GameCube and more
+- **Multi-platform support**: Play SNES, Genesis, PS1, N64, GameCube, and more
 - **Save states**: Save and load game progress with 5 slots per game
 - **Custom controls**: Editable touch controls with multiple layout styles
 - **Cheat codes**: Support for Game Genie and Pro Action Replay codes
@@ -33,12 +33,12 @@ nova-emulator/
 │   │   ├── java/com/nova/  # Kotlin source
 │   │   ├── cpp/              # Native C++ code
 │   │   └── res/             # Android resources
-└── examples/             # Example cores, layouts and resources
+└──
 ```
 
 ## NovaCore Website (Coming Soon)
 
-A companion website for optimized cores, layouts and resources:
+A companion website for optimized cores, layouts, and resources:
 - Optimized libretro cores
 - Custom control layouts
 - Cheat code databases
@@ -46,4 +46,4 @@ A companion website for optimized cores, layouts and resources:
 
 ## License
 
-MIT License
+Copyright (C) 2026 Blink-Chase. Licensed under GNU GPL v3.0. See [LICENSE](LICENSE) for more information.

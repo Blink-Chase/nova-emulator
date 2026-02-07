@@ -1,4 +1,4 @@
-package com.nova
+package com.blinkchase.nova
 
 import android.content.res.Configuration
 import androidx.compose.ui.geometry.Offset

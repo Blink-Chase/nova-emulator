@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.nova"
+    namespace = "com.blinkchase.nova"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.nova"
+        applicationId = "com.blinkchase.nova"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

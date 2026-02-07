@@ -1,4 +1,4 @@
-package com.nova
+package com.blinkchase.nova
 
 import android.content.ContentValues
 import android.content.Context

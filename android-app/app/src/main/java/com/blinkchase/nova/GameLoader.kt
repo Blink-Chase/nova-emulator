@@ -1,6 +1,4 @@
-// Add this to your GameScreen.kt or create a new GameLoader.kt file
-
-package com.nova
+package com.blinkchase.nova
 
 import android.content.Context
 import android.util.Log

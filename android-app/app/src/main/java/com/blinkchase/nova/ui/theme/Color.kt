@@ -1,4 +1,4 @@
-package com.jim.aetheremu.ui.theme
+package com.blinkchase.nova.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

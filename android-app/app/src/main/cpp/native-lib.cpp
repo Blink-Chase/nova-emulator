@@ -350,7 +350,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
 }
 
 JNIEXPORT void JNICALL
-Java_com_nova_MainActivity_updateNativeActivity(JNIEnv *env, jobject thiz) {
+Java_com_blinkchase_nova_MainActivity_updateNativeActivity(JNIEnv *env, jobject thiz) {
     std::lock_guard<std::mutex> lock(g_activityMutex);
     if (g_activity) env->DeleteGlobalRef(g_activity);
     g_activity = env->NewGlobalRef(thiz);
@@ -359,7 +359,7 @@ Java_com_nova_MainActivity_updateNativeActivity(JNIEnv *env, jobject thiz) {
 }
 
 JNIEXPORT void JNICALL
-Java_com_nova_MainActivity_setSystemDirectories(JNIEnv *env, jobject thiz, jstring systemDir, jstring saveDir) {
+Java_com_blinkchase_nova_MainActivity_setSystemDirectories(JNIEnv *env, jobject thiz, jstring systemDir, jstring saveDir) {
     const char* sysPath = env->GetStringUTFChars(systemDir, 0);
     const char* savePath = env->GetStringUTFChars(saveDir, 0);
     g_systemDir = sysPath;
@@ -369,7 +369,7 @@ Java_com_nova_MainActivity_setSystemDirectories(JNIEnv *env, jobject thiz, jstri
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_nova_MainActivity_loadCore(JNIEnv *env, jobject thiz, jstring corePath) {
+Java_com_blinkchase_nova_MainActivity_loadCore(JNIEnv *env, jobject thiz, jstring corePath) {
     const char *path = env->GetStringUTFChars(corePath, 0);
     LOGI("Loading core: %s", path);
     
@@ -421,7 +421,7 @@ Java_com_nova_MainActivity_loadCore(JNIEnv *env, jobject thiz, jstring corePath)
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_nova_MainActivity_nativeLoadGame(JNIEnv *env, jobject thiz, jstring romPath) {
+Java_com_blinkchase_nova_MainActivity_nativeLoadGame(JNIEnv *env, jobject thiz, jstring romPath) {
     if (!g_coreHandle || !core_load_game) return JNI_FALSE;
     
     if (g_isRunning.load()) {
@@ -450,22 +450,22 @@ Java_com_nova_MainActivity_nativeLoadGame(JNIEnv *env, jobject thiz, jstring rom
 }
 
 JNIEXPORT void JNICALL
-Java_com_nova_MainActivity_nativePauseGame(JNIEnv *env, jobject thiz) {
+Java_com_blinkchase_nova_MainActivity_nativePauseGame(JNIEnv *env, jobject thiz) {
     g_isPaused.store(true);
 }
 
 JNIEXPORT void JNICALL
-Java_com_nova_MainActivity_nativeResumeGame(JNIEnv *env, jobject thiz) {
+Java_com_blinkchase_nova_MainActivity_nativeResumeGame(JNIEnv *env, jobject thiz) {
     g_isPaused.store(false);
 }
 
 JNIEXPORT void JNICALL
-Java_com_nova_MainActivity_resetGame(JNIEnv *env, jobject thiz) {
+Java_com_blinkchase_nova_MainActivity_resetGame(JNIEnv *env, jobject thiz) {
     if (core_reset) core_reset();
 }
 
 JNIEXPORT void JNICALL
-Java_com_nova_MainActivity_nativeQuitGame(JNIEnv *env, jobject thiz) {
+Java_com_blinkchase_nova_MainActivity_nativeQuitGame(JNIEnv *env, jobject thiz) {
     g_isRunning.store(false);
     if (g_emuThread.joinable()) g_emuThread.join();
     if (core_unload_game) core_unload_game();
@@ -476,7 +476,7 @@ Java_com_nova_MainActivity_nativeQuitGame(JNIEnv *env, jobject thiz) {
 }
 
 JNIEXPORT void JNICALL
-Java_com_nova_MainActivity_setSurface(JNIEnv *env, jobject thiz, jobject surface) {
+Java_com_blinkchase_nova_MainActivity_setSurface(JNIEnv *env, jobject thiz, jobject surface) {
     std::lock_guard<std::mutex> lock(g_windowMutex);
     if (g_nativeWindow) {
         ANativeWindow_release(g_nativeWindow);
@@ -491,7 +491,7 @@ Java_com_nova_MainActivity_setSurface(JNIEnv *env, jobject thiz, jobject surface
 }
 
 JNIEXPORT void JNICALL
-Java_com_nova_MainActivity_sendInput(JNIEnv *env, jobject thiz, jint buttonId, jint value) {
+Java_com_blinkchase_nova_MainActivity_sendInput(JNIEnv *env, jobject thiz, jint buttonId, jint value) {
     uint16_t bits = g_joypadBits.load();
     if (value) bits |= (1 << buttonId);
     else bits &= ~(1 << buttonId);
@@ -499,12 +499,12 @@ Java_com_nova_MainActivity_sendInput(JNIEnv *env, jobject thiz, jint buttonId, j
 }
 
 JNIEXPORT void JNICALL
-Java_com_nova_MainActivity_setFastForward(JNIEnv *env, jobject thiz, jboolean enabled) {
+Java_com_blinkchase_nova_MainActivity_setFastForward(JNIEnv *env, jobject thiz, jboolean enabled) {
     g_fastForward.store(enabled);
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_nova_MainActivity_saveState(JNIEnv *env, jobject thiz, jstring filePath) {
+Java_com_blinkchase_nova_MainActivity_saveState(JNIEnv *env, jobject thiz, jstring filePath) {
     LOGI("saveState: core_serialize_size=%p, core_serialize=%p", 
          (void*)core_serialize_size, (void*)core_serialize);
     
@@ -550,7 +550,7 @@ Java_com_nova_MainActivity_saveState(JNIEnv *env, jobject thiz, jstring filePath
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_nova_MainActivity_loadState(JNIEnv *env, jobject thiz, jstring filePath) {
+Java_com_blinkchase_nova_MainActivity_loadState(JNIEnv *env, jobject thiz, jstring filePath) {
     LOGI("loadState: core_unserialize=%p", (void*)core_unserialize);
     
     if (!core_unserialize) {
@@ -596,10 +596,10 @@ Java_com_nova_MainActivity_loadState(JNIEnv *env, jobject thiz, jstring filePath
 }
 
 JNIEXPORT void JNICALL
-Java_com_nova_MainActivity_setCheat(JNIEnv *env, jobject thiz, jint index, jboolean enabled, jstring code) {}
+Java_com_blinkchase_nova_MainActivity_setCheat(JNIEnv *env, jobject thiz, jint index, jboolean enabled, jstring code) {}
 
 JNIEXPORT jint JNICALL
-Java_com_nova_MainActivity_getNativeFps(JNIEnv *env, jobject thiz) {
+Java_com_blinkchase_nova_MainActivity_getNativeFps(JNIEnv *env, jobject thiz) {
     return 60;
 }
 

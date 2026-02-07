@@ -1,4 +1,4 @@
-package com.nova
+package com.blinkchase.nova
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
@@ -229,27 +229,30 @@ private fun PortraitControlsLayout(
             }
         }
 
-        // Main controls area - use weight on the Row/Column, not on Box
+        // Main controls area - D-Pad and Action buttons spread from top to Select/Start
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f, fill = false)
+                .weight(1f)
         ) {
-            // D-Pad - Left side
+        // D-Pad - Left side, aligned to top
             Box(
                 modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 32.dp)
+                    .align(Alignment.TopStart)
+                    .padding(start = 16.dp)
+                    .padding(top = 16.dp)
             ) {
                 DPadLayout(
                     finalOpacity, sizeMultiplier, buttonOffsets, enabled, isEditing, onDrag, onInteraction
                 )
             }
 
-            // Center buttons (Select/Start)
+            // Center buttons (Select/Start) - moved higher
             Row(
-                modifier = Modifier.align(Alignment.BottomCenter),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 28.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 GameButton(
                     text = "SEL",
@@ -275,11 +278,12 @@ private fun PortraitControlsLayout(
                 )
             }
 
-            // Action buttons - Right side
+            // Action buttons - Far right side, aligned to top
             Box(
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 32.dp)
+                    .align(Alignment.TopEnd)
+                    .padding(end = 16.dp)
+                    .padding(top = 16.dp)
             ) {
                 when (platform) {
                     Platform.GENESIS -> GenesisActionButtons(
@@ -376,7 +380,7 @@ private fun LandscapePS1Layout(
             DPadLayout(finalOpacity, sizeMultiplier, buttonOffsets, enabled, isEditing, onDrag, onInteraction)
         }
 
-        // Select/Start - Bottom center
+        // Select/Start - Bottom center (moved lower for better reachability)
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -931,7 +935,7 @@ private fun DiamondButtonLayout(
             // Left button
             leftButton()
             // Center spacer for diamond effect
-            Spacer(modifier = Modifier.size((55 * sizeMultiplier).dp))
+            Spacer(modifier = Modifier.width((55 * sizeMultiplier).dp))
             // Right button
             rightButton()
         }
