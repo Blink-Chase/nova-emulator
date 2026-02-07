@@ -1,0 +1,39 @@
+# Built files
+*.apk
+*.aab
+build/
+.gradle/
+local.properties
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Kotlin
+.kotlin/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Secrets
+*.keystore
+*.jks
+secrets.properties
+
+# Generated files
+*.class
+
+# Excluded project folders
+snes9x/
+web-app/
+docs/
+
+# Development notes (not tracked)
+README-DEV.md

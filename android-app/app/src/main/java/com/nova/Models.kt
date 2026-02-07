@@ -1,0 +1,78 @@
+package com.nova
+
+import android.content.res.Configuration
+import androidx.compose.ui.geometry.Offset
+
+enum class InputStyle {
+    STANDARD,
+    COMPACT,
+    MINIMALIST,
+    TRANSPARENT,
+    HIDDEN
+}
+
+enum class ControlPosition {
+    DEFAULT,
+    LEFT,
+    RIGHT,
+    CENTER,
+    CUSTOM
+}
+
+enum class OrientationMode {
+    AUTO,           // Follow device orientation
+    LANDSCAPE,      // Force landscape
+    PORTRAIT,       // Force portrait
+    SENSOR          // Use sensors for all orientations
+}
+
+data class GameCheat(var name: String, var code: String, var enabled: Boolean)
+
+enum class Screen { HOME, LIBRARY, IMPORT, SEARCH, SETTINGS, GAME }
+
+// Data class to hold control layout configuration
+data class ControlLayoutConfig(
+    val style: InputStyle = InputStyle.STANDARD,
+    val position: ControlPosition = ControlPosition.DEFAULT,
+    val opacity: Float = 1.0f,
+    val buttonSize: Float = 1.0f,
+    val hapticFeedback: Boolean = true,
+    val showInLandscape: Boolean = true,
+    val showInPortrait: Boolean = true,
+    val autoHideDelay: Int = 0  // 0 = never auto-hide, otherwise seconds
+)
+
+// Game state preservation data
+data class GameState(
+    val gamePath: String = "",
+    val gameName: String = "",
+    val platformName: String = Platform.UNKNOWN.name,
+    val corePath: String = "",
+    val isPaused: Boolean = false,
+    val currentSlot: Int = 0,
+    val totalPlayTime: Long = 0L,
+    val lastPlayed: Long = System.currentTimeMillis()
+)
+
+// Screen orientation helper
+object OrientationHelper {
+    fun isLandscape(orientation: Int): Boolean {
+        return orientation == Configuration.ORIENTATION_LANDSCAPE
+    }
+    
+    fun getAspectRatio(orientation: Int): Float {
+        return if (isLandscape(orientation)) 16f / 9f else 9f / 16f
+    }
+}
+
+// Default button offsets for control layout (returns empty map for default positions)
+object DefaultButtonOffsets {
+    fun getDefaultOffsets(): Map<Int, Offset> {
+        // Empty map means use default positions defined in EnhancedControlsOverlay
+        return emptyMap()
+    }
+    
+    fun getOffsetsWithDelta(deltaX: Float = 0f, deltaY: Float = 0f): Map<Int, Offset> {
+        return emptyMap()
+    }
+}
