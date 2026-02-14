@@ -28,7 +28,7 @@ enum class OrientationMode {
 
 data class GameCheat(var name: String, var code: String, var enabled: Boolean)
 
-enum class Screen { HOME, LIBRARY, IMPORT, SEARCH, SETTINGS, GAME }
+enum class Screen { HOME, LIBRARY, IMPORT, SEARCH, SETTINGS, GAME, ABOUT, HELP }
 
 // Data class to hold control layout configuration
 data class ControlLayoutConfig(

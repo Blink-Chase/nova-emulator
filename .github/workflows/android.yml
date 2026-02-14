@@ -1,0 +1,182 @@
+# Nova Emulator - GitHub Actions CI/CD
+# Builds APK automatically and creates releases
+
+name: Android CI/CD
+
+on:
+  push:
+    branches: [main, testing]
+  pull_request:
+    branches: [main, testing]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+      
+      - name: Grant execute permission for gradlew
+        working-directory: ./android-app
+        run: chmod +x gradlew
+      
+      - name: Build Debug APK
+        working-directory: ./android-app
+        run: ./gradlew assembleDebug
+      
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nova-emulator-debug
+          path: android-app/app/build/outputs/apk/debug/app-debug.apk
+
+  # Release Candidate - Runs on testing branch
+  # Creates: v1.1.0-rc.1, v1.1.0-rc.2, etc.
+  rc:
+    needs: build
+    if: github.ref == 'refs/heads/testing'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+      
+      - name: Grant execute permission for gradlew
+        working-directory: ./android-app
+        run: chmod +x gradlew
+      
+      - name: Build APK
+        working-directory: ./android-app
+        run: ./gradlew assembleDebug
+      
+      - name: Get current RC number
+        id: rc_number
+        run: |
+          # Get current version
+          VERSION=$(grep -m1 "versionName" android-app/app/build.gradle.kts | grep -oP '"\K[^"]+' || echo "1.0.0")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Count existing RCs for this version
+          RC_COUNT=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases | grep -c "rc" || echo "0")
+          NEW_RC=$((RC_COUNT + 1))
+          echo "rc_count=$NEW_RC" >> $GITHUB_OUTPUT
+      
+      - name: Create RC Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.rc_number.outputs.version }}-rc.${{ steps.rc_number.outputs.rc_count }}
+          name: Nova Emulator v${{ steps.rc_number.outputs.version }}-rc.${{ steps.rc_number.outputs.rc_count }}
+          body: |
+            ## Nova Emulator - Release Candidate
+            
+            This is a pre-release version for testing.
+            
+            ### What's New:
+            - Latest changes from testing branch
+            
+            ### Installation:
+            1. Download the APK below
+            2. Enable "Install from unknown sources"
+            3. Install and enjoy!
+            
+            **WARNING**: This is a test version. Expect bugs!
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload RC APK
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_rc_release.outputs.upload_url }}
+          asset_path: android-app/app/build/outputs/apk/debug/app-debug.apk
+          asset_name: nova-emulator-v${{ steps.rc_number.outputs.version }}-rc${{ steps.rc_number.outputs.rc_count }}.apk
+          asset_content_type: application/vnd.android.package-archive
+
+  # Official Release - Runs on main branch
+  # Creates: v1.1.0, v1.2.0, etc.
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+      
+      - name: Grant execute permission for gradlew
+        working-directory: ./android-app
+        run: chmod +x gradlew
+      
+      - name: Build Release APK
+        working-directory: ./android-app
+        run: ./gradlew assembleDebug
+      
+      - name: Get version info
+        id: version
+        run: |
+          VERSION=$(grep -m1 "versionName" android-app/app/build.gradle.kts | grep -oP '"\K[^"]+' || echo "1.0.0")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Create Official Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Nova Emulator v${{ steps.version.outputs.version }}
+          body: |
+            ## Nova Emulator v${{ steps.version.outputs.version }}
+            
+            Official release of Nova Emulator Hub!
+            
+            ### Installation:
+            1. Download the APK below
+            2. Enable "Install from unknown sources"
+            3. Install and enjoy!
+            
+            ### Features:
+            - Multi-platform emulator frontend
+            - ROM Library with favorites
+            - Touch controls with customizable layouts
+            - Save states
+            - Dark/Light themes
+            - And more!
+            
+            See CHANGELOG.md for full release notes.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload Release APK
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: android-app/app/build/outputs/apk/debug/app-debug.apk
+          asset_name: nova-emulator-v${{ steps.version.outputs.version }}.apk
+          asset_content_type: application/vnd.android.package-archive

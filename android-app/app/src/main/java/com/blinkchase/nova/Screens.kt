@@ -210,7 +210,9 @@ fun GameCard(game: GameFile, isFavorite: Boolean, onToggleFavorite: (GameFile) -
 fun SettingsScreen(
     prefs: android.content.SharedPreferences,
     rootStorageDir: File,
-    onReportBug: () -> Unit
+    onReportBug: () -> Unit,
+    onGoToAbout: () -> Unit,
+    onGoToHelp: () -> Unit
 ) {
     var refreshKey by remember { mutableStateOf(0) }
     var scanMode by remember { mutableStateOf(prefs.getInt(MainActivity.KEY_SCAN_MODE, 0)) }
@@ -253,8 +255,8 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(16.dp))
         Text("Profile: Guest")
         Spacer(modifier = Modifier.height(8.dp))
-        Text("Version: 1.0.0")
-        Text("System Arch: ${Build.SUPPORTED_ABIS.firstOrNull() ?: "Unknown"}", 
+        Text("Version: 1.1.0")
+        Text("System Arch: ${Build.SUPPORTED_ABIS.firstOrNull() ?: "Unknown"}",
              style = MaterialTheme.typography.bodySmall, 
              color = Color.Gray)
         
@@ -262,6 +264,37 @@ fun SettingsScreen(
         Text("General", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
         
+        // Theme mode selection
+        var themeMode by remember { mutableStateOf(prefs.getInt(MainActivity.KEY_THEME_MODE, 0)) }
+        Text("Theme Mode", style = MaterialTheme.typography.bodyMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("System" to 0, "Light" to 1, "Dark" to 2).forEach { (label, value) ->
+                FilterChip(
+                    selected = themeMode == value,
+                    onClick = {
+                        themeMode = value
+                        prefs.edit().putInt(MainActivity.KEY_THEME_MODE, value).apply()
+                    },
+                    label = { Text(label) }
+                )
+            }
+        }
+        Text(
+            text = when (themeMode) {
+                0 -> "Follow system setting"
+                1 -> "Always use light theme"
+                2 -> "Always use dark theme"
+                else -> ""
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Gray
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text("Show Fast Forward Button", modifier = Modifier.weight(1f))
             Switch(checked = showFF, onCheckedChange = { 
@@ -535,6 +568,27 @@ fun SettingsScreen(
             Text("Report Bug / View Logs")
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // About and Help buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = onGoToAbout,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("About")
+            }
+            Button(
+                onClick = onGoToHelp,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Help")
+            }
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = {
@@ -545,6 +599,7 @@ fun SettingsScreen(
                 showFF = true
                 controllerStyle = InputStyle.STANDARD
                 autoPauseMenu = true
+                themeMode = 0
                 refreshKey++
                 android.widget.Toast.makeText(context, "Settings Reset", android.widget.Toast.LENGTH_SHORT).show()
             },
@@ -669,4 +724,162 @@ fun DiagnosticsDialog(
             }
         }
     )
+}
+
+@Composable
+fun AboutScreen(onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+        Text("Nova Emulator", style = MaterialTheme.typography.headlineLarge)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("Version 1.1.0", style = MaterialTheme.typography.titleMedium)
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Text("About", style = MaterialTheme.typography.titleLarge)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "Nova Emulator is a multi-platform Android emulator frontend built with Jetpack Compose and libretro.",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Features", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "• ROM Library with favorites\n" +
+            "• Multiple emulator cores\n" +
+            "• Customizable touch controls\n" +
+            "• Save states\n" +
+            "• Fast forward\n" +
+            "• Dark/Light themes",
+            style = MaterialTheme.typography.bodySmall
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Supported Platforms", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "SNES, Genesis, GBA, GB, GBC, PS1",
+            style = MaterialTheme.typography.bodySmall
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("License", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "GNU General Public License v3.0",
+            style = MaterialTheme.typography.bodySmall
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Developer", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "Blink-Chase",
+            style = MaterialTheme.typography.bodySmall
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        Button(onClick = onBack) {
+            Text("Back")
+        }
+    }
+}
+
+@Composable
+fun HelpScreen(onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+        Text("Help", style = MaterialTheme.typography.headlineLarge)
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Getting Started
+        Text("Getting Started", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "1. Copy your ROM files to /Documents/Emulator Games/\n" +
+            "2. Copy libretro cores to /Documents/Nova/cores/\n" +
+            "3. Open Nova Emulator and tap 'Scan Games'",
+            style = MaterialTheme.typography.bodySmall
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Playing Games
+        Text("Playing Games", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "• Tap a game in the Library to start\n" +
+            "• Use on-screen controls to play\n" +
+            "• Tap the menu button for more options\n" +
+            "• Swipe down for fast forward",
+            style = MaterialTheme.typography.bodySmall
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Controls
+        Text("Touch Controls", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "• Drag buttons to reposition them\n" +
+            "• Long-press to reset positions\n" +
+            "• Change styles in Settings > Controller",
+            style = MaterialTheme.typography.bodySmall
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Save States
+        Text("Save States", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "• Access from in-game menu\n" +
+            "• 5 save slots per game\n" +
+            "• Auto-save when closing game",
+            style = MaterialTheme.typography.bodySmall
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Troubleshooting
+        Text("Troubleshooting", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "• Game not loading? Check ROM format\n" +
+            "• No sound? Increase audio latency in Settings\n" +
+            "• Controls not working? Try different control style\n" +
+            "• Use System Diagnostics in Settings for help",
+            style = MaterialTheme.typography.bodySmall
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        Button(onClick = onBack) {
+            Text("Back")
+        }
+    }
 }

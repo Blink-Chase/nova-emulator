@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
         const val KEY_SHOW_FF = "show_ff"
         const val KEY_AUTO_PAUSE_MENU = "auto_pause_menu"
         const val KEY_CONTROLLER_STYLE = "controller_style"
+        const val KEY_THEME_MODE = "theme_mode"
         const val BTN_B = 0; const val BTN_Y = 1; const val BTN_SELECT = 2; const val BTN_START = 3
         const val BTN_UP = 4; const val BTN_DOWN = 5; const val BTN_LEFT = 6; const val BTN_RIGHT = 7
         const val BTN_A = 8; const val BTN_X = 9; const val BTN_L = 10; const val BTN_R = 11
@@ -248,7 +249,30 @@ class MainActivity : ComponentActivity() {
             }
         }
         updateNativeActivity()
-        setContent { NovaEmuTheme { Surface(modifier = Modifier.fillMaxSize()) { NovaApp() } } }
+        setContent { 
+            var themeMode by remember { mutableStateOf(0) }
+            val prefs = remember { getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
+            LaunchedEffect(Unit) {
+                themeMode = prefs.getInt(KEY_THEME_MODE, 0)
+            }
+            DisposableEffect(prefs) {
+                val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                    if (key == KEY_THEME_MODE) {
+                        themeMode = prefs.getInt(KEY_THEME_MODE, 0)
+                    }
+                }
+                prefs.registerOnSharedPreferenceChangeListener(listener)
+                onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+            }
+            val isDarkTheme = when (themeMode) {
+                1 -> false
+                2 -> true
+                else -> null
+            }
+            NovaEmuTheme(darkTheme = isDarkTheme) { 
+                Surface(modifier = Modifier.fillMaxSize()) { NovaApp() } 
+            } 
+        }
     }
 
     override fun onStop() { super.onStop(); resetAudio() }
@@ -387,7 +411,7 @@ class MainActivity : ComponentActivity() {
 
         Scaffold(
             bottomBar = {
-                if (currentScreen != Screen.GAME) {
+                if (currentScreen != Screen.GAME && currentScreen != Screen.ABOUT && currentScreen != Screen.HELP) {
                     NavigationBar {
                         NavigationBarItem(
                             icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
@@ -438,7 +462,19 @@ class MainActivity : ComponentActivity() {
                         SearchScreen(games = gameList, onGameSelected = { launchGame(it); currentScreen = Screen.GAME })
                     }
                     Screen.SETTINGS -> {
-                        SettingsScreen(prefs = prefs, rootStorageDir = storageDir, onReportBug = { android.widget.Toast.makeText(context, "Check logs in console", android.widget.Toast.LENGTH_SHORT).show() })
+                        SettingsScreen(
+                            prefs = prefs,
+                            rootStorageDir = storageDir,
+                            onReportBug = { android.widget.Toast.makeText(context, "Check logs in console", android.widget.Toast.LENGTH_SHORT).show() },
+                            onGoToAbout = { currentScreen = Screen.ABOUT },
+                            onGoToHelp = { currentScreen = Screen.HELP }
+                        )
+                    }
+                    Screen.ABOUT -> {
+                        AboutScreen(onBack = { currentScreen = Screen.SETTINGS })
+                    }
+                    Screen.HELP -> {
+                        HelpScreen(onBack = { currentScreen = Screen.SETTINGS })
                     }
                     Screen.GAME -> {
                         // Create a safe directory for this game
